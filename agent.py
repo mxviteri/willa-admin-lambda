@@ -91,6 +91,171 @@ def _run_athena_query(query: str):
         results.append(item)
     return results
 
+def _get_data_dictionary(table_name: str):
+    """Get the data dictionary for a given Athena table."""
+    tables = {
+        "latest_entity_save": {
+            "table_name": "latest_entity_save",
+            "table_description": "A table containing the latest save data. This includes things like the urls, titles, and descriptions of content saved by users.",
+            "columns": [
+                {
+                    "name": "id",
+                    "description": "The id of the save.",
+                    "type": "string",
+                },
+                {
+                    "name": "url",
+                    "description": "The url of the save.",
+                    "type": "string",
+                },
+                {
+                    "name": "title",
+                    "description": "The title of the save.",
+                    "type": "string",
+                },
+                {
+                    "name": "description",
+                    "description": "The description of the save.",
+                    "type": "string",
+                },
+                {
+                    "name": "comments",
+                    "description": "The comments on the save.",
+                    "type": "string",
+                },
+                {
+                    "name": "image",
+                    "description": "The image of the save.",
+                    "type": "string",
+                },
+                {
+                    "name": "imagekey",
+                    "description": "The key of the image of the save.",
+                    "type": "string",
+                },
+                {
+                    "name": "publisher",
+                    "description": "The publishing website of the save (ex. Instagram, YouTube, etc.).",
+                    "type": "string",
+                },
+                {
+                    "name": "boardids",
+                    "description": "The ids of the boards the save is associated with.",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                    },
+                },
+                {
+                    "name": "createdat",
+                    "description": "The date and time the save was created.",
+                    "type": "string",
+                },
+                {
+                    "name": "updatedat",
+                    "description": "The date and time the save was last updated.",
+                    "type": "string",
+                },
+                {
+                    "name": "username",
+                    "description": "The cognito id of the user who saved the content.",
+                    "type": "string",
+                },
+                {
+                    "name": "isarchived",
+                    "description": "Whether the save has been archived.",
+                    "type": "boolean",
+                }
+            ]
+        },
+        "latest_entity_board": {
+            "table_name": "latest_entity_board",
+            "table_description": "A table containing the latest board data. This includes things like the name, description, and image of the board.",
+            "columns": [
+                {
+                    "name": "id",
+                    "description": "The id of the board.",
+                    "type": "string",
+                },
+                {
+                    "name": "name",
+                    "description": "The name of the board.",
+                    "type": "string",
+                },
+                {
+                    "name": "boardimagesaveids",
+                    "description": "The ids of the saves in the board.",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                    },
+                },
+                {
+                    "name": "username",
+                    "description": "The cognito id of the user who created the board.",
+                    "type": "string",
+                },
+                {
+                    "name": "isarchived",
+                    "description": "Whether the board has been archived.",
+                    "type": "boolean",
+                },
+                {
+                    "name": "createdat",
+                    "description": "The date and time the board was created.",
+                    "type": "string",
+                },
+                {
+                    "name": "updatedat",
+                    "description": "The date and time the board was last updated.",
+                    "type": "string",
+                }
+            ]
+        },
+        "latest_entity_edge": {
+            "table_name": "latest_entity_edge",
+            "table_description": "A table containing the latest edge data. This includes things like the id, type, and timestamp of the edge (Save to Board).",
+            "columns": [
+                {
+                    "name": "id",
+                    "description": "The id of the edge.",
+                    "type": "string",
+                },
+                {
+                    "name": "saveid",
+                    "description": "The id of the save that is associated with the edge.",
+                    "type": "string",
+                },
+                {
+                    "name": "boardid",
+                    "description": "The id of the board that is associated with the edge.",
+                    "type": "string",
+                },
+                {
+                    "name": "createdat",
+                    "description": "The date and time the edge was created.",
+                    "type": "string",
+                },
+                {
+                    "name": "updatedat",
+                    "description": "The date and time the edge was last updated.",
+                    "type": "string",
+                },
+                {
+                    "name": "username",
+                    "description": "The cognito id of the user who created the edge.",
+                    "type": "string",
+                },
+                {
+                    "name": "isarchived",
+                    "description": "Whether the edge has been archived.",
+                    "type": "boolean",
+                }
+            ]
+        }
+    }
+    return tables[table_name]
+
 # --- Define tools ---
 @tool("get_cognito_user_id_by_email", return_direct=False)
 def get_cognito_user_id_by_email(email: str, user_pool_id: str | None = None):
@@ -162,7 +327,8 @@ def list_athena_tables():
 def describe_athena_table(table_name: str):
     """Describe the columns and types for a given Athena table."""
     try:
-        return _run_athena_query(f"DESCRIBE {table_name};")
+        # return _run_athena_query(f"DESCRIBE {table_name};")
+        return _get_data_dictionary(table_name)
     except Exception as e:
         return f"Error: {str(e)}"
 
@@ -177,11 +343,12 @@ def query_athena_sql(query: str):
 
 # --- Build agent ---
 SYSTEM_PROMPT = """
-You are a careful AWS Athena analyst.
+You are a careful AWS Athena analyst. You are also an expert in the data schema of the Athena database.
 
 Rules:
 - Think step-by-step.
 - Before querying the database, call the tool `list_athena_tables` to get a list of available tables.
+- Before querying a table, call the tool `describe_athena_table` with the table name to get the data dictionary.
 - When you need data, call the tool `query_athena_sql` with ONE SELECT query.
 - Read-only only; no INSERT/UPDATE/DELETE/ALTER/DROP/CREATE/REPLACE/TRUNCATE.
 - If asked for a user's information, call the tool `get_cognito_user_info_by_sub` with the user's sub (username).
