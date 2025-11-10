@@ -1,5 +1,5 @@
 import json
-from willa_rest_api.services.saves import list_saves_service
+from willa_rest_api.services.saves import list_saves_service, get_saves_count
 
 
 def list_saves_controller(event: dict):
@@ -13,6 +13,9 @@ def list_saves_controller(event: dict):
         limit = 20
 
     result = list_saves_service(limit=limit, next_token=next_token)
+    # Augment with overall total count for numeric pagination
+    total_count = get_saves_count()
+    result["totalCount"] = total_count
     return {
         "statusCode": 200,
         "headers": {
