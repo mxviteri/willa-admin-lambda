@@ -4,7 +4,7 @@ build:
 	rm -rf build function.zip
 	mkdir build
 	pip install -r requirements.txt -t build
-	cp -r *.py build
+	cp -r *.py willa_rest_api build
 	cd build && zip -r ../function.zip . && cd ..
 
 deploy-s3:
@@ -25,7 +25,7 @@ build-docker:
 	rm -rf build function.zip
 	docker run --rm --entrypoint /bin/sh -v "$$PWD":/var/task -w /var/task public.ecr.aws/lambda/python:3.12 -lc "\
 		python -m pip install -r requirements.txt -t build && \
-		cp -r *.py build && \
+		cp -r *.py willa_rest_api build && \
 		cd build && python -m zipfile -c ../function.zip . \
 	"
 

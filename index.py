@@ -4,6 +4,7 @@ from agent import call_agent
 import boto3
 from botocore.exceptions import ClientError
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
+from willa_rest_api.controllers.saves import list_saves_controller
 
 LAMBDA_CLIENT = boto3.client("lambda")
 WS_MANAGEMENT_BASE = "https://eqqrx1ycgl.execute-api.us-east-1.amazonaws.com/prod"
@@ -49,32 +50,29 @@ def handler(event, context):
         # Fallback HTTP REST
         path = (event or {}).get("path", "")
         method = (event or {}).get("httpMethod", "")
-        if method == "POST" and path.endswith("/agent/chat"):
-            body_str = (event or {}).get("body") or ""
-            data = json.loads(body_str) if body_str else {}
-            message = data.get("message")
-            if not isinstance(message, str):
-                return {
-                    "statusCode": 400,
-                    "headers": {"Content-Type": "application/json"},
-                    "body": json.dumps({"error": "message must be a string"})
-                }
-            response = call_agent(message)
-            return {
-                "statusCode": 200,
-                "headers": {"Content-Type": "application/json"},
-                "body": json.dumps({"message": response})
-            }
+        # New: GET /saves → list_saves_controller handles query params and response
+        if method == "GET" and path.endswith("/saves"):
+            return list_saves_controller(event)
         # Fallback hello for other routes/tests
         return {
             "statusCode": 200,
-            "headers": {"Content-Type": "application/json"},
+            "headers": {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "*",
+                "Access-Control-Allow-Methods": "GET,OPTIONS",
+            },
             "body": json.dumps({"message": "hello world"})
         }
     except Exception as e:
         return {
             "statusCode": 500,
-            "headers": {"Content-Type": "application/json"},
+            "headers": {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "*",
+                "Access-Control-Allow-Methods": "GET,OPTIONS",
+            },
             "body": json.dumps({"error": str(e)})
         }
 
