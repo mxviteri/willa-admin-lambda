@@ -61,10 +61,9 @@ def _run_athena_query(query: str) -> List[Dict[str, Any]]:
     return items
 
 
-def list_saves_service(limit: int = 20, next_token: Optional[str] = None) -> Dict[str, Any]:
+def list_saves_service(limit: int = 20, offset: Optional[int] = 0) -> Dict[str, Any]:
     """
-    Return saves from 'latest_entity_save' in descending order by createdat with keyset pagination.
-    Pagination token encodes the last (createdat, id) tuple from the previous page.
+    Return saves from 'latest_entity_save' in descending order by createdat using limit/offset pagination.
     """
     # Sanitize limit
     if not isinstance(limit, int):
@@ -74,17 +73,13 @@ def list_saves_service(limit: int = 20, next_token: Optional[str] = None) -> Dic
             limit = 20
     limit = max(1, min(limit, 100))
 
-    where_clause = ""
-    if next_token:
-        decoded = _decode_next_token(next_token)
-        if decoded and all(decoded):
-            last_created_at, last_id = decoded
-            # Keyset pagination: strictly less than previous last tuple in DESC order
-            # Note: createdat and id are modeled as strings in the datalake dictionary.
-            where_clause = (
-                f"WHERE (createdat < '{last_created_at}') "
-                f"OR (createdat = '{last_created_at}' AND id < '{last_id}')"
-            )
+    # Sanitize offset
+    if offset is None or not isinstance(offset, int):
+        try:
+            offset = int(offset)  # type: ignore[arg-type]
+        except Exception:
+            offset = 0
+    offset = max(0, offset)
 
     # Explicitly list columns to keep payload tight and ordered
     columns = [
@@ -102,30 +97,30 @@ def list_saves_service(limit: int = 20, next_token: Optional[str] = None) -> Dic
         "username",
         "isarchived",
     ]
+    # Athena does not support OFFSET directly; emulate with row_number() window
+    select_cols = ", ".join(columns)
+    order_clause = "createdat DESC, id DESC"
+    start_row = offset
+    end_row = offset + limit
     sql = (
-        f"SELECT {', '.join(columns)} "
-        f"FROM latest_entity_save "
-        f"{where_clause} "
-        f"ORDER BY createdat DESC, id DESC "
-        f"LIMIT {limit}"
+        "WITH ordered AS ("
+        f"  SELECT {select_cols}, "
+        f"         row_number() OVER (ORDER BY {order_clause}) AS rn "
+        f"  FROM latest_entity_save"
+        ") "
+        f"SELECT {select_cols} "
+        "FROM ordered "
+        f"WHERE rn > {start_row} AND rn <= {end_row} "
+        "ORDER BY rn"
     )
 
     items = _run_athena_query(sql)
 
-    # Compute new next token if we got a full page
-    new_next_token: Optional[str] = None
-    if items:
-        last = items[-1]
-        last_created_at = last.get("createdat")
-        last_id = last.get("id")
-        if last_created_at and last_id and len(items) == limit:
-            new_next_token = _encode_next_token(last_created_at, last_id)
-
     return {
         "items": items,
-        "nextToken": new_next_token,
         "count": len(items),
         "limit": limit,
+        "offset": offset,
     }
 
 
