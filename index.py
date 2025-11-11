@@ -5,6 +5,7 @@ import boto3
 from botocore.exceptions import ClientError
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
 from willa_rest_api.controllers.saves import list_saves_controller
+from willa_rest_api.controllers.metrics import get_general_metrics_controller
 
 LAMBDA_CLIENT = boto3.client("lambda")
 WS_MANAGEMENT_BASE = "https://eqqrx1ycgl.execute-api.us-east-1.amazonaws.com/prod"
@@ -53,6 +54,9 @@ def handler(event, context):
         # New: GET /saves → list_saves_controller handles query params and response
         if method == "GET" and path.endswith("/saves"):
             return list_saves_controller(event)
+        # GET /metrics → consolidated counts
+        if method == "GET" and path.endswith("/metrics"):
+            return get_general_metrics_controller(event)
         # Fallback hello for other routes/tests
         return {
             "statusCode": 200,
