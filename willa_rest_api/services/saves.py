@@ -94,3 +94,33 @@ def get_saves_count() -> int:
         return int(total_str)
     except Exception:
         return 0
+
+
+def get_save_by_id(save_id: str) -> Optional[Dict[str, Any]]:
+    """
+    Return a single save by id from 'latest_entity_save'.
+    """
+    if not save_id:
+        return None
+    columns = [
+        "id",
+        "url",
+        "title",
+        "description",
+        "comments",
+        "image",
+        "imagekey",
+        "publisher",
+        "boardids",
+        "createdat",
+        "updatedat",
+        "username",
+        "isarchived",
+    ]
+    select_cols = ", ".join(columns)
+    # Athena uses single quotes for string literals
+    sql = f"SELECT {select_cols} FROM latest_entity_save WHERE id = '{save_id.replace(\"'\", \"''\")}' LIMIT 1"
+    rows = run_athena_query(sql)
+    if not rows:
+        return None
+    return rows[0]

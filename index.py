@@ -4,7 +4,7 @@ from agent import call_agent
 import boto3
 from botocore.exceptions import ClientError
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
-from willa_rest_api.controllers.saves import list_saves_controller
+from willa_rest_api.controllers.saves import list_saves_controller, get_save_by_id_controller
 from willa_rest_api.controllers.metrics import get_general_metrics_controller
 
 LAMBDA_CLIENT = boto3.client("lambda")
@@ -54,6 +54,9 @@ def handler(event, context):
         # New: GET /saves → list_saves_controller handles query params and response
         if method == "GET" and path.endswith("/saves"):
             return list_saves_controller(event)
+        # GET /saves/{id} → get single save by id
+        if method == "GET" and "/saves/" in path:
+            return get_save_by_id_controller(event)
         # GET /metrics → consolidated counts
         if method == "GET" and path.endswith("/metrics"):
             return get_general_metrics_controller(event)
