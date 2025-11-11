@@ -1,11 +1,11 @@
 import json
 import os
-from agent import call_agent
 import boto3
 from botocore.exceptions import ClientError
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
 from willa_rest_api.controllers.saves import list_saves_controller, get_save_by_id_controller
 from willa_rest_api.controllers.metrics import get_general_metrics_controller
+from willa_admin_agent.agent import call_agent
 
 LAMBDA_CLIENT = boto3.client("lambda")
 WS_MANAGEMENT_BASE = "https://eqqrx1ycgl.execute-api.us-east-1.amazonaws.com/prod"

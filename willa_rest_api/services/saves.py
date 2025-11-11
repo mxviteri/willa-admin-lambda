@@ -119,7 +119,8 @@ def get_save_by_id(save_id: str) -> Optional[Dict[str, Any]]:
     ]
     select_cols = ", ".join(columns)
     # Athena uses single quotes for string literals
-    sql = f"SELECT {select_cols} FROM latest_entity_save WHERE id = '{save_id.replace(\"'\", \"''\")}' LIMIT 1"
+    escaped_id = save_id.replace("'", "''")
+    sql = f"SELECT {select_cols} FROM latest_entity_save WHERE id = '{escaped_id}' LIMIT 1"
     rows = run_athena_query(sql)
     if not rows:
         return None
