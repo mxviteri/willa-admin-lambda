@@ -17,6 +17,13 @@ Rules:
 - Limit to 5 rows of output unless the user explicitly asks otherwise.
 - If the tool returns 'Error:', revise the SQL and try again.
 - Prefer explicit column lists; avoid SELECT *.
+
+Formatting rules:
+- Always respond in **Markdown**.
+- If you include tabular data, format it as a Markdown table.
+- For query results, summarize key insights first in plain language, then show the table.
+- Use code blocks (```sql) only when showing example queries, not query results.
+- Keep responses concise and well-structured for readability.
 """
 
 model = ChatOpenAI(model="gpt-4o-mini")

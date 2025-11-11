@@ -91,7 +91,25 @@ def describe_athena_table(table_name: str):
 
 @tool("query_athena_sql")
 def query_athena_sql(query: str):
-    """Run an arbitrary SQL query against Athena and return the results."""
+    """
+    Run an arbitrary SQL query against Athena and return the results.
+
+    Auto-formatting rules:
+    - If the table contains date fields like 'createdat' or 'updatedat' stored as strings,
+      automatically convert them using:
+        cast(from_iso8601_timestamp(createdat) as timestamp) AS created_at
+        cast(from_iso8601_timestamp(updatedat) as timestamp) AS updated_at
+    - When comparing dates, use `from_iso8601_timestamp()` in WHERE clauses, e.g.:
+        WHERE from_iso8601_timestamp(createdat) > timestamp '2025-01-01 00:00:00'
+    - Prefer LIMIT 50 for large queries.
+
+    Example:
+        SELECT cast(from_iso8601_timestamp(createdat) as timestamp) AS created_at,
+               title, description
+        FROM willa_datalake.globalsaves
+        WHERE from_iso8601_timestamp(createdat) > timestamp '2025-01-01 00:00:00'
+        LIMIT 10;
+    """
     try:
         return _run_athena_query(query)
     except Exception as e:
