@@ -4,7 +4,7 @@ import boto3
 from botocore.exceptions import ClientError
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
 from willa_rest_api.controllers.saves import list_saves_controller, get_save_by_id_controller
-from willa_rest_api.controllers.metrics import get_general_metrics_controller
+from willa_rest_api.controllers.metrics import get_general_metrics_controller, get_time_series_metrics_controller
 from willa_rest_api.controllers.boards import list_boards_controller
 from willa_admin_agent.agent import call_agent
 
@@ -61,6 +61,9 @@ def handler(event, context):
         # GET /metrics → consolidated counts
         if method == "GET" and path.endswith("/metrics"):
             return get_general_metrics_controller(event)
+        # GET /metrics/timeseries → day-by-day counts
+        if method == "GET" and path.endswith("/metrics/timeseries"):
+            return get_time_series_metrics_controller(event)
         # GET /boards → list boards
         if method == "GET" and path.endswith("/boards"):
             return list_boards_controller(event)
