@@ -1,18 +1,7 @@
-import os
 import json
 import base64
-import boto3
-import time
 from typing import Any, Dict, List, Optional, Tuple
-
-# Configuration (override via env if needed)
-REGION = os.getenv("AWS_REGION", "us-east-1")
-ATHENA_DATABASE = os.getenv("ATHENA_DATABASE", "willa_datalake")
-ATHENA_WORKGROUP = os.getenv("ATHENA_WORKGROUP", "willa_datalake")
-
-_session = boto3.session.Session(region_name=REGION)
-_athena = _session.client("athena", region_name=REGION)
-
+from willa_rest_api.utils.athena import run_athena_query
 
 def _encode_next_token(last_created_at: str, last_id: str) -> str:
     payload = {"createdat": last_created_at, "id": last_id}
@@ -26,39 +15,6 @@ def _decode_next_token(token: str) -> Optional[Tuple[str, str]]:
         return data.get("createdat"), data.get("id")
     except Exception:
         return None
-
-
-def _run_athena_query(query: str) -> List[Dict[str, Any]]:
-    start_kwargs: Dict[str, Any] = {
-        "QueryString": query,
-        "QueryExecutionContext": {"Database": ATHENA_DATABASE},
-        "WorkGroup": ATHENA_WORKGROUP,
-    }
-    resp = _athena.start_query_execution(**start_kwargs)
-    qid = resp["QueryExecutionId"]
-
-    # Wait for completion (simple polling)
-    while True:
-        info = _athena.get_query_execution(QueryExecutionId=qid)
-        state = info["QueryExecution"]["Status"]["State"]
-        if state in ("SUCCEEDED", "FAILED", "CANCELLED"):
-            break
-        time.sleep(0.5)
-    if state != "SUCCEEDED":
-        reason = info["QueryExecution"]["Status"].get("StateChangeReason", "")
-        raise RuntimeError(f"Athena query failed: {state} {reason}")
-
-    results = _athena.get_query_results(QueryExecutionId=qid)
-    rows = results.get("ResultSet", {}).get("Rows", [])
-    if not rows:
-        return []
-    headers = [col.get("VarCharValue", f"col_{i}") for i, col in enumerate(rows[0].get("Data", []))]
-    items: List[Dict[str, Any]] = []
-    for row in rows[1:]:
-        data_cells = row.get("Data", [])
-        item = {headers[i]: cell.get("VarCharValue") for i, cell in enumerate(data_cells)}
-        items.append(item)
-    return items
 
 
 def list_saves_service(limit: int = 20, offset: Optional[int] = 0) -> Dict[str, Any]:
@@ -114,7 +70,7 @@ def list_saves_service(limit: int = 20, offset: Optional[int] = 0) -> Dict[str, 
         "ORDER BY rn"
     )
 
-    items = _run_athena_query(sql)
+    items = run_athena_query(sql)
 
     return {
         "items": items,
@@ -129,7 +85,7 @@ def get_saves_count() -> int:
     Return the total count of rows in 'latest_entity_save'.
     """
     sql = "SELECT COUNT(1) AS total FROM latest_entity_save"
-    rows = _run_athena_query(sql)
+    rows = run_athena_query(sql)
     if not rows:
         return 0
     # Athena returns strings; coerce safely
