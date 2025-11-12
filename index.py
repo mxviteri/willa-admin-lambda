@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeou
 from willa_rest_api.controllers.saves import list_saves_controller, get_save_by_id_controller
 from willa_rest_api.controllers.metrics import get_general_metrics_controller, get_time_series_metrics_controller
 from willa_rest_api.controllers.boards import list_boards_controller
+from willa_rest_api.controllers.users import list_users_controller
 from willa_admin_agent.agent import call_agent
 
 LAMBDA_CLIENT = boto3.client("lambda")
@@ -67,6 +68,9 @@ def handler(event, context):
         # GET /boards → list boards
         if method == "GET" and path.endswith("/boards"):
             return list_boards_controller(event)
+        # GET /users → list Cognito users
+        if method == "GET" and path.endswith("/users"):
+            return list_users_controller(event)
         # Fallback hello for other routes/tests
         return {
             "statusCode": 200,
