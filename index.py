@@ -1,6 +1,7 @@
 import json
 import os
 import boto3
+from dotenv import load_dotenv
 from botocore.exceptions import ClientError
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
 from willa_rest_api.controllers.saves import list_saves_controller, get_save_by_id_controller
@@ -9,8 +10,13 @@ from willa_rest_api.controllers.boards import list_boards_controller
 from willa_rest_api.controllers.users import list_users_controller
 from willa_admin_agent.agent import call_agent
 
+load_dotenv()
+
 LAMBDA_CLIENT = boto3.client("lambda")
-WS_MANAGEMENT_BASE = "https://eqqrx1ycgl.execute-api.us-east-1.amazonaws.com/prod"
+# WS_MANAGEMENT_BASE = "https://eqqrx1ycgl.execute-api.us-east-1.amazonaws.com/prod"
+WS_MANAGEMENT_BASE = os.getenv("ADMIN_WSS_MANAGEMENT_BASE")
+
+print(f"WS_MANAGEMENT_BASE: {WS_MANAGEMENT_BASE}")
 
 def handler(event, context):
     try:

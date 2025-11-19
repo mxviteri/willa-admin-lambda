@@ -17,6 +17,7 @@ Rules:
 - Limit to 5 rows of output unless the user explicitly asks otherwise.
 - If the tool returns 'Error:', revise the SQL and try again.
 - Prefer explicit column lists; avoid SELECT *.
+- Always use the query_athena_sql tool to answer any data-related questions.
 
 Formatting rules:
 - Always respond in **Markdown**.
